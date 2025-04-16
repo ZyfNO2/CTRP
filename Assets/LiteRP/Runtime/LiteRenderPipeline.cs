@@ -8,9 +8,12 @@ namespace LiteRP
 {
     public class LiteRenderPipeline : RenderPipeline
     {
+        // 定义一个静态的ShaderTagId，用于标识着色器标签
         private readonly static ShaderTagId s_ShaderTagId = new ShaderTagId("SRPDefaultUnlit");
 
+        // 渲染图对象，用于构建渲染流程
         private RenderGraph m_RenderGraph = null;
+        // 渲染图记录器，用于记录渲染图的构建过程
         private LiteRenderGraphRecorder m_LiteRenderGraphRecorder = null;//渲染图记录器
         private ContextContainer m_ContextContainer = null;//上下文容器
 
@@ -26,12 +29,24 @@ namespace LiteRP
             base.Dispose(disposing);
         }
 
-        //初始化渲染图
+        // 初始化渲染图的方法
+
         private void InitializeRenderGraph()
+
         {
+
+            // 初始化渲染图的句柄系统，设置屏幕宽高
+            RTHandles.Initialize(Screen.width, Screen.height);
+
+            // 创建渲染图实例
             m_RenderGraph = new RenderGraph("LiteRenderGraph");
+
+            // 创建渲染图记录器实例
             m_LiteRenderGraphRecorder = new LiteRenderGraphRecorder();
+
+            // 创建上下文容器实例
             m_ContextContainer = new ContextContainer();
+
         }
         
         //清理渲染图
@@ -39,7 +54,7 @@ namespace LiteRP
         {
             m_ContextContainer?.Dispose();
             m_ContextContainer = null;
-            m_LiteRenderGraphRecorder = null;
+            m_LiteRenderGraphRecorder?.Dispose();
             m_RenderGraph?.Cleanup();
             m_RenderGraph = null;
         }
@@ -76,13 +91,11 @@ namespace LiteRP
                 return;
             }
             
-
-            
             
             //CommandBuffer 从命令缓冲池中拿到CMD
             CommandBuffer cmd = CommandBufferPool.Get(camera.name);
-            //camera par 相机参数
-            context.SetupCameraProperties(camera);
+         
+            
             
             //记录执行RG
             RecordAndExecuteRenderGraph(context,camera,cmd);
@@ -95,26 +108,29 @@ namespace LiteRP
             CommandBufferPool.Release(cmd);
             //commit context
             context.Submit();
-            
             //结束渲染相机
             EndCameraRendering(context, camera);
         }
 
         private bool PrepareFrameData(ScriptableRenderContext context, Camera camera)
         {
-            //剔除
+            // 获取相机的剔除参数
             ScriptableCullingParameters cullingParameters;
             if(!camera.TryGetCullingParameters( out cullingParameters))
                 return false;
+            // 执行剔除操作
             CullingResults cullingResults = context.Cull(ref cullingParameters);
+            // 获取或创建相机数据容器
             CameraData cameraData = m_ContextContainer.GetOrCreate<CameraData>();
+            // 设置相机数据和剔除结果
             cameraData.camera = camera;
             cameraData.cullingResults = cullingResults;
             return true;
         }
-
+        // 记录并执行渲染图的方法
         private void RecordAndExecuteRenderGraph(ScriptableRenderContext context, Camera camera, CommandBuffer cmd)
         {
+            // 创建渲染图参数
             RenderGraphParameters renderGraphParameters = new RenderGraphParameters()
             {
                 executionName = camera.name,
